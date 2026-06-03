@@ -1,0 +1,14 @@
+!!!!!!!!!!!!!!!! Mitigacion de STP Root Claim Attack (BPDU Guard)
+en
+conf term
+!!!! Aplicar en el puerto donde esta conectado el atacante
+interface GigabitEthernet0/1
+!!!! Portfast para puertos de acceso (no switches)
+spanning-tree portfast
+!!!! BPDU Guard: apaga el puerto si recibe un BPDU
+spanning-tree bpduguard enable
+exit
+
+!!!! Opcional: habilitar BPDU Guard globalmente en todos los portfast
+spanning-tree portfast bpduguard default
+do wr
