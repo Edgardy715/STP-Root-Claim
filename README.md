@@ -2,25 +2,27 @@
 
 # STP Root Claim Attack (Root Bridge Takeover)
 
-> **Autor:** Edgardy Olivero | **Matricula:** 20250704  
-> **Laboratorio:** EGALDITO_LAB | **Herramienta:** Python 3 + Scapy  
+> **Autor:** Edgardy Olivero | **Matrícula:** 20250704
+> **Laboratorio:** EGALDITO\_LAB | **Herramienta:** Python 3 + Scapy
 > **Repositorio:** [github.com/Edgardy715/STP-Root-Claim](https://github.com/Edgardy715/STP-Root-Claim)
 
 ---
 
-## Objetivo del Laboratorio
+## 📋 Objetivo del Laboratorio
 
-Demostrar como un atacante puede tomar control del proceso de eleccion STP (Spanning Tree Protocol) capturando y modificando BPDUs reales del switch para reclamar el rol de Root Bridge con prioridad 0, forzando una reconvergencia STP que reorienta el trafico de la red hacia el atacante. El ataque consiste en enviar BPDUs superiores con un Bridge ID mejor que el del root activo, lo que hace que otros switches acepten al atacante como nuevo root [web:36][web:39].
+Demostrar cómo un atacante puede tomar control del proceso de elección STP (Spanning Tree Protocol) capturando y modificando BPDUs reales del switch para reclamar el rol de Root Bridge con prioridad 0, forzando una reconvergencia STP que reorienta el tráfico de la red hacia el atacante.
 
-**Prerequisito:** Este ataque requirio previamente explotar DTP (Dynamic Trunking Protocol) para poner el puerto de Kali en modo trunk. Eso fue posible porque SW2 tenia el puerto configurado como `switchport mode dynamic auto`, permitiendo recibir los BPDUs nativos del switch antes de capturarlos y modificarlos [web:39].
-
-## Objetivo del Script
-
-Capturar un BPDU real enviado por SW2 (multicast `01:80:c2:00:00:00`), modificar en memoria los campos de prioridad, Root MAC y Bridge MAC para declarar a Kali como Root Bridge con prioridad 0 y path cost 0, y retransmitir este BPDU modificado cada 2 segundos hasta que SW2 reconverja y adopte a Kali como nuevo Root Bridge [web:36][web:39].
+> **Prerequisito:** Este ataque requirió previamente explotar DTP (Dynamic Trunking Protocol) para poner el puerto de Kali en modo trunk. Esto fue posible porque SW2 tenía el puerto configurado como `switchport mode dynamic auto`, lo que permitió recibir los BPDUs nativos del switch antes de capturarlos y modificarlos. El script opera sobre `eth0` sin subinterfaz porque los BPDUs viajan sin etiqueta VLAN en el trunk nativo.
 
 ---
 
-## Estructura del Repositorio
+## 🎯 Objetivo del Script
+
+Capturar un BPDU real enviado por SW2 (multicast `01:80:c2:00:00:00`), modificar en memoria los campos de prioridad, Root MAC y Bridge MAC para declarar a Kali como Root Bridge con prioridad 0 y path cost 0, y retransmitir este BPDU modificado cada 2 segundos hasta que SW2 reconverja y adopte a Kali como nuevo Root Bridge.
+
+---
+
+## 📁 Estructura del Repositorio
 
 ```text
 STP-Root-Claim/
@@ -40,30 +42,30 @@ STP-Root-Claim/
 
 ---
 
-## Parametros del Script
+## ⚙️ Parámetros del Script
 
 | Campo modificado | Valor original (SW1/SW2) | Valor inyectado (Kali) | Efecto |
 |---|---|---|---|
 | `pkt[0].src` | MAC de SW2 | `kali_mac` | MAC origen del BPDU. |
-| `pkt[0].rootid` | 32769 (SW1) | `0` | Prioridad Root declarada minima. |
+| `pkt[0].rootid` | 32769 (SW1) | `0` | Prioridad Root declarada mínima. |
 | `pkt[0].rootmac` | `0cb5.a4d7.0000` (SW1) | `kali_mac` | Root Bridge anunciado = Kali. |
 | `pkt[0].bridgeid` | 32769 (SW2) | `0` | Prioridad del bridge = 0. |
 | `pkt[0].bridgemac` | `0cc0.7fb8.0000` (SW2) | `kali_mac` | Bridge anunciado = Kali. |
 | `pkt[0].pathcost` | 4 | `0` | Costo de ruta directo al root = 0. |
-| `pkt[0].portid` | puerto real | `0` | Port ID minimo. |
-| `iface` | — | `eth0` | Interfaz en modo trunk post-DTP. |
-| `sleep(2)` | — | 2 segundos | Intervalo de reenvio de BPDU. |
+| `pkt[0].portid` | puerto real | `0` | Port ID mínimo. |
+| `iface` | — | `eth0` | Interfaz en modo trunk (post-DTP). |
+| `sleep(2)` | — | 2 segundos | Intervalo de reenvío de BPDU. |
 
 ---
 
-## Requisitos
+## 🛠️ Requisitos
 
 ```bash
-# Dependencia
+# Dependencias
 pip install scapy
 
 # PREREQUISITO: eth0 debe estar en modo trunk
-# (logrado via ataque DTP previo o configuracion manual)
+# (logrado vía ataque DTP previo o configuración manual en el switch)
 
 # Verificar que eth0 recibe BPDUs
 tcpdump -i eth0 ether dst 01:80:c2:00:00:00 -c 1
@@ -74,16 +76,16 @@ sudo python3 Script/STP-Root-claim.py
 
 ---
 
-## Funcionamiento del Script
+## 🔍 Funcionamiento del Script
 
-### Flujo de ejecucion
+### Flujo de ejecución
 
 ```text
 1. sniff(filter="ether dst 01:80:c2:00:00:00", count=1, timeout=10)
-   -> captura 1 BPDU real enviado por SW2
-2. Si no llega BPDU en 10 segundos -> error y salida
-3. pkt.show() -> muestra el BPDU original capturado
-4. get_if_hwaddr(iface) -> obtiene MAC real de Kali
+   → captura 1 BPDU real enviado por SW2
+2. Si no llega BPDU en 10 segundos → error y salida
+3. pkt.show() → muestra el BPDU original capturado
+4. get_if_hwaddr(iface) → obtiene MAC real de Kali
 5. Modifica el BPDU en memoria:
    pkt.src       = kali_mac
    pkt.rootid    = 0
@@ -93,24 +95,24 @@ sudo python3 Script/STP-Root-claim.py
    pkt.pathcost  = 0
    pkt.portid    = 0
 6. Bucle cada 2 segundos:
-   -> sendp(pkt_modificado, iface=eth0)
-   -> imprime numero de BPDU enviado
-7. Ctrl+C -> muestra total e instrucciones de verificacion
+   → sendp(pkt_modificado, iface=eth0)
+   → imprime número de BPDU enviado
+7. Ctrl+C → muestra total e instrucciones de verificación
 ```
 
 ### BPDU original vs BPDU modificado
 
 ```text
-Campo        Original (SW1/SW2)            Modificado (Kali)
------------  ----------------------------  --------------------------
-Root ID      32769                         0
-Root MAC     0cb5.a4d7.0000 (SW1)          0c:bf:c5:c2:00:00 (Kali)
-Bridge ID    32769                         0
-Bridge MAC   0cc0.7fb8.0000 (SW2)          0c:bf:c5:c2:00:00 (Kali)
-Path Cost    4 (link SW2-SW1)              0 (directo, sin costo)
+Campo        Original (SW1/SW2)             Modificado (Kali)
+-----------  -----------------------------  --------------------------
+Root ID      32769                          0
+Root MAC     0cb5.a4d7.0000 (SW1)           0c:bf:c5:c2:00:00 (Kali)
+Bridge ID    32769                          0
+Bridge MAC   0cc0.7fb8.0000 (SW2)           0c:bf:c5:c2:00:00 (Kali)
+Path Cost    4 (enlace SW2-SW1)             0 (directo, sin costo)
 ```
 
-### Verificacion del exito del ataque
+### Verificación del éxito del ataque
 
 ```cisco
 SW2# show spanning-tree vlan 1
@@ -121,57 +123,51 @@ SW2# show spanning-tree vlan 1
 
 ---
 
-## Documentacion de la Red
+## 🌐 Documentación de la Red
 
-### Topologia del Laboratorio
+### Topología del Laboratorio
 
 ```text
 +------------------+        +---------------------+        +---------------------+
 |   Kali Linux     |        |        SW2          |        |        SW1          |
-|   (Atacante)     |<------>|  GNS3 vIOS-L2       |<------>|  GNS3 vIOS-L2      |
-|     eth0         |  Gi0/1 | VTP Client          |  Gi0/0 | VTP Server         |
-| 0c:bf:c5:c2:0000 |  TRUNK | 0cc0.7fb8.0000      |        | 0cb5.a4d7.0000    |
-| (post-DTP)       |        |                     |        | Root Bridge (orig.)|
+|   (Atacante)     |◄──────►|  GNS3 vIOS-L2       |◄──────►|  GNS3 vIOS-L2       |
+|     eth0 (trunk) | Gi0/1  | VTP Client          | Gi0/0  | VTP Server          |
+| 0c:bf:c5:c2:00:00|        | 0cc0.7fb8.0000      |        | 0cb5.a4d7.0000      |
+|   (post-DTP)     |        |                     |        | Root Bridge (orig.) |
 +------------------+        +---------------------+        +---------------------+
-                                                                       |  Gi0/1
-                                                            +---------------------+
-                                                            |         R1          |
-                                                            |  192.168.10.1/24    |
-                                                            +---------------------+
+                                                                    | Gi0/1
+                                                         +---------------------+
+                                                         |         R1          |
+                                                         |  192.168.10.1/24    |
+                                                         +---------------------+
 ```
 
-> Topologia completa en `Topologia/Topologia.png`
+> Topología completa disponible en `Topologia/Topologia.png`
 
 ### Tabla de Direccionamiento
 
-| Dispositivo | Interfaz | VLAN | IP / Mascara | MAC | Rol |
+| Dispositivo | Interfaz | VLAN | IP / Máscara | MAC | Rol |
 |---|---|---|---|---|---|
-| Kali Linux | eth0 (trunk) | 1,10 | dinamica | `0c:bf:c5:c2:00:00` | Atacante |
-| SW1 | Gi0/0 (trunk) | 1,10 | — | `0cb5.a4d7.0000` | Root Bridge original |
-| SW2 | Gi0/0 (trunk) | 1,10 | — | `0cc0.7fb8.0000` | VTP Client |
-| R1 | Gi0/0 | 10 | 192.168.10.1/24 | — | Gateway / DHCP |
+| Kali Linux | `eth0` (trunk) | 1, 10 | dinámica | `0c:bf:c5:c2:00:00` | Atacante |
+| SW1 | Gi0/0 (trunk) | 1, 10 | — | `0cb5.a4d7.0000` | VTP Server / Root Bridge original |
+| SW2 | Gi0/1 (trunk) | 1, 10 | — | `0cc0.7fb8.0000` | VTP Client |
+| R1 | Gi0/0 | 10 | 192.168.10.1/24 | — | Gateway / DHCP Server |
 
 ```text
-Antes del ataque -> Root Bridge: SW1 (Priority 32769, MAC 0cb5.a4d7.0000)
-Durante el ataque -> Root Bridge: Kali (Priority 0, MAC 0c:bf:c5:c2:00:00)
+VTP Domain  : EGALDITO_LAB
+SW1         : VTP Server | STP Root Bridge | Priority 32769 | MAC 0cb5.a4d7.0000
+SW2         : VTP Client
+VLAN 10     : RED_LOCAL — 192.168.10.0/24
+
+Antes del ataque  → Root Bridge: SW1  (Priority 32769 | MAC 0cb5.a4d7.0000)
+Durante el ataque → Root Bridge: Kali (Priority 0     | MAC 0c:bf:c5:c2:00:00)
 ```
 
 ---
 
-## Capturas de Pantalla
+## 🛡️ Contramedidas
 
-| Momento | Descripcion |
-|---|---|
-| Pre-ataque | `show spanning-tree` muestra SW1 como Root Bridge. |
-| Captura BPDU | El script muestra el BPDU original con `pkt[0].show()`. |
-| Durante ataque | BPDUs enviados cada 2 segundos con Root=Kali Priority=0. |
-| Reconvergencia | `show spanning-tree` muestra Kali como nuevo Root Bridge. |
-
----
-
-## Contramedidas
-
-El archivo de mitigacion esta en `Mitigacion/Mitigacion-STP-Root-Claim.ios`.
+El archivo de mitigación está en `Mitigacion/Mitigacion-STP-Root-Claim.ios`.
 
 ### 1. BPDU Guard — defensa principal en puertos de acceso
 
@@ -188,7 +184,7 @@ spanning-tree portfast bpduguard default
 do wr
 ```
 
-> Si el puerto recibe un BPDU, se desactiva automaticamente (err-disabled). BPDU Guard esta pensado para puertos de usuario no confiables [web:34][web:37][web:40][web:41].
+> Si el puerto recibe un BPDU, se desactiva automáticamente (err-disabled). BPDU Guard está pensado para puertos de usuario donde no se espera recibir BPDUs bajo ninguna circunstancia.
 
 ### 2. Root Guard — protege puertos que no deben ver un nuevo Root
 
@@ -197,9 +193,9 @@ interface GigabitEthernet0/1
  spanning-tree guard root
 ```
 
-Root Guard evita que un puerto acepte BPDUs superiores que intenten convertir a otro equipo en Root Bridge [web:32][web:33][web:35][web:38].
+> Root Guard evita que un puerto acepte BPDUs superiores que intenten convertir a otro equipo en Root Bridge. A diferencia de BPDU Guard, no desactiva el puerto sino que lo pone en estado `root-inconsistent` mientras dure el ataque y lo recupera automáticamente al cesar.
 
-### 3. Deshabilitar DTP para prevenir el trunk inicial
+### 3. Deshabilitar DTP — bloquea el prerequisito del ataque
 
 ```cisco
 interface GigabitEthernet0/1
@@ -207,9 +203,9 @@ interface GigabitEthernet0/1
  switchport mode access
 ```
 
-> Esta medida bloquea el prerequisito del ataque, porque el atacante ya no podria negociar trunk ni recibir BPDUs nativos por ese enlace [web:39].
+> Sin acceso trunk, Kali no puede recibir BPDUs nativos del switch y el ataque no puede iniciarse.
 
-### Verificacion
+### Verificación
 
 ```cisco
 SW2# show spanning-tree inconsistentports
@@ -218,11 +214,15 @@ SW2# show interfaces GigabitEthernet0/1 status
 
 ---
 
-## Video Demostrativo
+## 🎬 Video Demostrativo
 
-**Lista de reproduccion EGALDITO_LAB:** [Layer 2 Network Attacks](https://www.youtube.com/@Edgardy715)
+**Lista de reproducción EGALDITO\_LAB — Layer 2 Network Attacks:**
+[https://www.youtube.com/playlist?list=PL24FUvJVT9rBmlkIyA1pGp28VHhh3JK1j](https://www.youtube.com/playlist?list=PL24FUvJVT9rBmlkIyA1pGp28VHhh3JK1j)
+
+**Video de este ataque:**
+[https://youtu.be/lppA9mMFDhc](https://youtu.be/lppA9mMFDhc)
 
 ---
 
-*Laboratorio desarrollado con fines estrictamente educativos en entorno GNS3 aislado.*  
-*Autor: Edgardy Olivero | 20250704 | EGALDITO_LAB*
+*Laboratorio desarrollado con fines estrictamente educativos en entorno GNS3 aislado.*
+*Autor: Edgardy Olivero | 20250704 | EGALDITO\_LAB*
